@@ -135,6 +135,15 @@ a{text-decoration:none;color:inherit}
 .provider-card{padding:10px;background:#0f1117;border-radius:6px;font-size:12px}
 .provider-card .name{font-weight:600;color:#ccc}
 .provider-card .status{margin-top:4px}
+
+/* League category groups */
+.league-category{margin-bottom:16px}
+.league-category h4{font-size:13px;color:#aaa;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #1e2530;display:flex;justify-content:space-between;align-items:center}
+.league-category h4 .count{font-size:11px;color:#555;font-weight:400}
+.league-category .category-actions{display:flex;gap:8px;margin-bottom:8px}
+.league-category .cat-btn{background:#1e2538;color:#888;border:1px solid #2a3a5a;border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;transition:all .15s}
+.league-category .cat-btn:hover{background:#2a3a5a;color:#ccc}
+.league-category .league-list{margin-bottom:0}
 </style>
 </head>
 <body>
@@ -227,13 +236,53 @@ a{text-decoration:none;color:inherit}
         
         <div class="settings-section">
             <h3>🌍 联赛白名单</h3>
-            <p style="font-size:12px;color:#666;margin-bottom:12px">只关注选中的联赛。未选中的联赛不会被拉取赛程，也不会生成预测。</p>
-            <div class="league-list" id="leagueList">
-                <div class="loading">加载中</div>
+            <p style="font-size:12px;color:#666;margin-bottom:12px">只关注选中的赛事。未选中的赛事不会被拉取赛程，也不会生成预测。点击右侧按钮可批量开关。</p>
+            
+            <!-- 国家队赛事 -->
+            <div class="league-category">
+                <h4>🏆 国家队赛事 <span class="count" id="count-intl">0</span></h4>
+                <div class="category-actions">
+                    <button class="cat-btn" onclick="toggleCategory('intl', true)">全选</button>
+                    <button class="cat-btn" onclick="toggleCategory('intl', false)">全不选</button>
+                </div>
+                <div class="league-list" id="leagueList-intl"></div>
             </div>
-            <div style="margin-top:14px;display:flex;gap:10px">
+            
+            <!-- 俱乐部洲际大赛 -->
+            <div class="league-category">
+                <h4>🌍 俱乐部洲际大赛 <span class="count" id="count-club">0</span></h4>
+                <div class="category-actions">
+                    <button class="cat-btn" onclick="toggleCategory('club', true)">全选</button>
+                    <button class="cat-btn" onclick="toggleCategory('club', false)">全不选</button>
+                </div>
+                <div class="league-list" id="leagueList-club"></div>
+            </div>
+            
+            <!-- 各国顶级联赛 -->
+            <div class="league-category">
+                <h4>⚽ 各国顶级联赛 <span class="count" id="count-league">0</span></h4>
+                <div class="category-actions">
+                    <button class="cat-btn" onclick="toggleCategory('league', true)">全选</button>
+                    <button class="cat-btn" onclick="toggleCategory('league', false)">全不选</button>
+                </div>
+                <div class="league-list" id="leagueList-league"></div>
+            </div>
+            
+            <!-- 各国国内杯赛 -->
+            <div class="league-category">
+                <h4>🏅 各国国内杯赛 <span class="count" id="count-cup">0</span></h4>
+                <div class="category-actions">
+                    <button class="cat-btn" onclick="toggleCategory('cup', true)">全选</button>
+                    <button class="cat-btn" onclick="toggleCategory('cup', false)">全不选</button>
+                </div>
+                <div class="league-list" id="leagueList-cup"></div>
+            </div>
+
+            <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
                 <button class="btn primary" onclick="saveLeagueSettings()">💾 保存设置</button>
                 <button class="btn" onclick="resetLeagueSettings()">🔄 恢复默认</button>
+                <button class="btn" onclick="toggleAll(true)">✅ 全部开启</button>
+                <button class="btn" onclick="toggleAll(false)">❌ 全部关闭</button>
             </div>
             <div id="leagueSaveMsg" style="margin-top:8px;font-size:12px;display:none"></div>
         </div>
@@ -603,27 +652,55 @@ async function loadSettings() {
     }
 }
 
+const LEAGUE_GROUPS = {
+    intl: ["世界杯","世界杯预选赛(欧足联)","世界杯预选赛(亚足联)","世界杯预选赛(中北美)","世界杯预选赛(南美)","世界杯预选赛(非洲)","欧洲杯","欧洲杯预选赛","欧国联","亚洲杯","美洲杯","非洲杯","世俱杯","女足世界杯","女足欧洲杯","奥运会足球"],
+    club: ["欧冠","欧联","欧协联","欧超杯","南美解放者杯","南美杯","欧冠资格赛","欧协联资格赛"],
+    league: ["英超","西甲","意甲","德甲","法甲","葡超","荷甲","英冠","巴西甲","巴西乙","俄超","苏超","挪超","瑞超","芬超","希腊超","瑞士超","土超","丹超","比利时甲","法乙","德乙","意乙","西乙","德丙","奥超","英甲","英乙","英非联","北爱超","威超","智利甲","秘鲁甲","哥伦比亚甲","阿根廷甲","乌拉圭甲","乌克兰超","美职联","日职联","澳超","墨超","中超","匈牙利甲","罗马尼亚甲","斯洛文尼亚甲"],
+    cup: ["英格兰足总杯","英格兰联赛杯","英格兰社区盾","西班牙国王杯","西班牙超级杯","意大利杯","意大利超级杯","德国杯","德国超级杯","荷兰杯","荷兰超级杯","葡萄牙杯","葡萄牙联赛杯","葡萄牙超级杯","比利时超级杯","巴西杯"]
+};
+
 function renderLeagueList() {
-    const list = document.getElementById('leagueList');
-    const allLeagues = ["英超","西甲","意甲","德甲","法甲","瑞超","芬超","挪超"];
-    list.innerHTML = allLeagues.map(l => {
-        const active = leagueConfig[l] !== false;
-        return `
-            <div class="league-item">
-                <span class="name">${l}</span>
-                <div class="toggle ${active ? 'active' : ''}" onclick="toggleLeague('${l}', this)"></div>
-            </div>
-        `;
-    }).join('');
+    for (const [cat, leagues] of Object.entries(LEAGUE_GROUPS)) {
+        const container = document.getElementById('leagueList-' + cat);
+        const activeCount = leagues.filter(l => leagueConfig[l] !== false).length;
+        document.getElementById('count-' + cat).textContent = activeCount + '/' + leagues.length;
+        container.innerHTML = leagues.map(l => {
+            const active = leagueConfig[l] !== false;
+            return `
+                <div class="league-item">
+                    <span class="name">${l}</span>
+                    <div class="toggle ${active ? 'active' : ''}" onclick="toggleLeague('${l}', this)"></div>
+                </div>
+            `;
+        }).join('');
+    }
 }
 
 function toggleLeague(league, el) {
     leagueConfig[league] = !leagueConfig[league];
     el.classList.toggle('active');
+    for (const [cat, leagues] of Object.entries(LEAGUE_GROUPS)) {
+        if (leagues.includes(league)) {
+            const activeCount = leagues.filter(l => leagueConfig[l] !== false).length;
+            document.getElementById('count-' + cat).textContent = activeCount + '/' + leagues.length;
+            break;
+        }
+    }
+}
+
+function toggleCategory(cat, enable) {
+    LEAGUE_GROUPS[cat].forEach(l => leagueConfig[l] = enable);
+    renderLeagueList();
+}
+
+function toggleAll(enable) {
+    Object.values(LEAGUE_GROUPS).flat().forEach(l => leagueConfig[l] = enable);
+    renderLeagueList();
 }
 
 function resetLeagueSettings() {
-    const defaults = {"英超":true,"西甲":true,"意甲":true,"德甲":true,"法甲":true,"瑞超":true,"芬超":true,"挪超":true};
+    const defaults = {};
+    Object.values(LEAGUE_GROUPS).flat().forEach(l => defaults[l] = true);
     leagueConfig = defaults;
     renderLeagueList();
     const msg = document.getElementById('leagueSaveMsg');
