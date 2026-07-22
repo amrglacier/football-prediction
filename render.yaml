@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: football-prediction-system
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:///./football_prediction.db
+      - key: SYNC_DATABASE_URL
+        value: sqlite:///./football_prediction.db
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: TIMEZONE
+        value: Asia/Shanghai
+      - key: FOOTBALL_API_PROVIDER
+        value: api-football
+      - key: API_FOOTBALL_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DELTA_T
+        value: 60
+      - key: VOLATILITY_THRESHOLD
+        value: 0.15
+      - key: LEARNING_RATE
+        value: 0.05
+      - key: MAX_HISTORY
+        value: 5
+      - key: PYTHON_VERSION
+        value: 3.12
