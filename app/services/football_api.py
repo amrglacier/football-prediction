@@ -1,11 +1,10 @@
-"""Football data API client using API-Football v3 (via RapidAPI).
+"""Football data API client using API-Football v3 (api-football.com direct).
 
 API-Football v3 returns fixtures with structure:
   response[] -> fixture, league, teams, goals, score, status
 
 Headers required:
-  x-rapidapi-host: api-football-v1.p.rapidapi.com
-  x-rapidapi-key: {key}
+  x-apisports-key: {key}
 """
 
 import json
@@ -101,12 +100,11 @@ REV_LEAGUE_NAME = {
 
 
 class ApiFootballClient:
-    """API-Football v3 client via RapidAPI."""
+    """API-Football v3 client (api-football.com direct, not RapidAPI)."""
 
     def __init__(self):
-        self.base = "https://api-football-v1.p.rapidapi.com/v3"
+        self.base = "https://v3.football.api-sports.io"
         self.key = settings.api_football_key
-        self.host = "api-football-v1.p.rapidapi.com"
         self._ok = bool(self.key)
         self._session = requests.Session()
 
@@ -115,8 +113,7 @@ class ApiFootballClient:
 
     def _headers(self) -> dict:
         return {
-            "x-rapidapi-key": self.key,
-            "x-rapidapi-host": self.host,
+            "x-apisports-key": self.key,
             "Accept": "application/json",
         }
 

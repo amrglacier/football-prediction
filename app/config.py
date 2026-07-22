@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     # --- Football Data API ---
     football_api_provider: str = "api-football"
     api_football_key: str = ""
-    api_football_base_url: str = "https://api-football-v1.p.rapidapi.com/v3"
+    api_football_base_url: str = "https://v3.football.api-sports.io"
     sportmonks_api_key: str = ""
 
     # --- AI Model Keys ---
