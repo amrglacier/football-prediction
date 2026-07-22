@@ -3,17 +3,19 @@
 import logging
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 
 from app.config import settings
 from app.core.database import init_db, async_session_factory
 from app.core.constants import MatchStatus
 from app.core.state_machine import is_locked
+from app.core.settings_db import get_league_whitelist
 from app.models.models import Match
 from app.api.matches import router as matches_router
 from app.api.monitor import router as monitor_router
@@ -24,6 +26,28 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+async def _fixture_fetch_loop():
+    """Periodically fetch new fixtures using DB league whitelist.
+
+    Runs every 6 hours, fetches matches for today + next 3 days.
+    Only leagues in the whitelist are fetched and stored.
+    """
+    from app.services.phase1_selection import run_phase1
+
+    while True:
+        try:
+            await asyncio.sleep(21600)  # 6 hours
+            async with async_session_factory() as db:
+                leagues = await get_league_whitelist(db)
+                today = date.today()
+                for offset in range(0, 4):
+                    target = today + timedelta(days=offset)
+                    logger.info(f"Auto-fetch fixtures for {target}, leagues={leagues}")
+                    await run_phase1(db, target_date=target, leagues=leagues)
+        except Exception as e:
+            logger.error(f"Fixture fetch loop error: {e}")
 
 
 async def _pipeline_loop():
@@ -99,11 +123,13 @@ async def lifespan(app: FastAPI):
 
     # Start background pipeline
     pipeline_task = asyncio.create_task(_pipeline_loop())
-    logger.info("Background pipeline started")
+    fetch_task = asyncio.create_task(_fixture_fetch_loop())
+    logger.info("Background pipeline + fixture fetcher started")
 
     yield
 
     pipeline_task.cancel()
+    fetch_task.cancel()
     logger.info("Shutting down...")
 
 
@@ -135,13 +161,7 @@ app.mount("/static", StaticFiles(directory="app/static", html=True), name="stati
 @app.get("/", tags=["root"])
 async def root():
     """Root endpoint: redirect to dashboard."""
-    return {
-        "system": "Football Prediction System V4.0",
-        "mode": "lite (SQLite + background tasks)",
-        "docs": "/docs",
-        "dashboard": "/static/index.html",
-        "api": "/api",
-    }
+    return RedirectResponse(url="/static/index.html")
 
 
 @app.get("/api", tags=["root"])
