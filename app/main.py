@@ -3,7 +3,7 @@
 import logging
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -72,7 +72,6 @@ async def _pipeline_loop():
                                     await run_phase3(db, match, "odds_jump")
 
                         elif match.status == MatchStatus.LOCKED.value:
-                            from datetime import timedelta
                             kickoff_naive = match.kickoff_time.replace(tzinfo=None) if match.kickoff_time.tzinfo else match.kickoff_time
                             if match.kickoff_time and now > kickoff_naive + timedelta(hours=3):
                                 match.status = MatchStatus.FINISHED.value
